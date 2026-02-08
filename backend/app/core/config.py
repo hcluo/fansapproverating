@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     celery_task_always_eager: bool = False
     celery_task_eager_propagates: bool = False
 
+    admin_token: str = ""
+    enable_wikidata_refresh: bool = False
+
     match_denylist: str = "king"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

@@ -36,3 +36,9 @@ celery_app.conf.beat_schedule = {
         "args": ("today",),
     },
 }
+
+if settings.enable_wikidata_refresh:
+    celery_app.conf.beat_schedule["wikidata-refresh-monthly"] = {
+        "task": "app.tasks.jobs.refresh_players_from_wikidata",
+        "schedule": crontab(day_of_month="1", hour=2, minute=0),
+    }
