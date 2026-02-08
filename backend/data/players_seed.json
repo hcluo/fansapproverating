@@ -1,0 +1,5 @@
+[
+  {"full_name": "LeBron James", "team": "LAL", "active": true, "aliases": ["LeBron", "King James"]},
+  {"full_name": "Stephen Curry", "team": "GSW", "active": true, "aliases": ["Steph", "Curry"]},
+  {"full_name": "Nikola Jokic", "team": "DEN", "active": true, "aliases": ["Jokic"]}
+]
