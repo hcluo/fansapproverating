@@ -26,6 +26,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.jobs.reddit_ingest_task",
         "schedule": crontab(minute="*/10"),
     },
+    "forum-ingest-every-30-min": {
+        "task": "app.tasks.jobs.forum_ingest_task",
+        "schedule": crontab(minute="*/30"),
+    },
     "aggregate-yesterday": {
         "task": "app.tasks.jobs.aggregate_daily_task",
         "schedule": crontab(hour=1, minute=5),

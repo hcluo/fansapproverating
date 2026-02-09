@@ -1,4 +1,5 @@
 import time
+import datetime
 from pathlib import Path
 
 from app.core.config import get_settings
@@ -16,6 +17,15 @@ def _parse_date(value: str | None) -> str | None:
     if not value:
         return None
     return value.split("T")[0]
+
+
+def _parse_date_value(value: str | None):
+    if not value:
+        return None
+    try:
+        return datetime.date.fromisoformat(value.split("T")[0])
+    except ValueError:
+        return None
 
 
 def _parse_year(value: str | None) -> int | None:
@@ -54,6 +64,8 @@ def fetch_players(limit: int, sleep_s: float, max_rows: int | None, denylist_pat
                         "birth_date": None,
                         "nba_debut_year": None,
                         "retired": None,
+                        "team": None,
+                        "_team_end": None,
                     },
                 )
 
@@ -75,6 +87,23 @@ def fetch_players(limit: int, sleep_s: float, max_rows: int | None, denylist_pat
                     if not current or nba_start_year < current:
                         player["nba_debut_year"] = nba_start_year
 
+                team_label = row.get("team2Label", {}).get("value")
+                nba_end = row.get("nbaEnd", {}).get("value")
+                if team_label:
+                    end_value = _parse_date_value(nba_end)
+                    existing_end = player.get("_team_end")
+                    if existing_end is None:
+                        if end_value is None:
+                            player["team"] = team_label
+                            player["_team_end"] = None
+                        else:
+                            player["team"] = team_label
+                            player["_team_end"] = end_value
+                    else:
+                        if end_value is None or (existing_end is not None and end_value > existing_end):
+                            player["team"] = team_label
+                            player["_team_end"] = end_value
+
             fetched += len(rows)
             offset += limit
             if max_rows and fetched >= max_rows:
@@ -93,6 +122,7 @@ def fetch_players(limit: int, sleep_s: float, max_rows: int | None, denylist_pat
         player["normalized_name"] = normalize_text(full_name)
         player["aliases"] = build_aliases(full_name, player.get("aliases", []), denylist)
         player["positions"] = sorted(set(player.get("positions", [])))
+        player.pop("_team_end", None)
         cleaned_players.append(player)
 
     return cleaned_players
