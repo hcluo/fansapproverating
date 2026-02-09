@@ -1,13 +1,16 @@
 from datetime import date
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.entities import Player, PlayerDailyMetric
 from app.schemas.player import NarrativeOut, PlayerMetricOut, PlayerOut
 from app.services.text import normalize_text
-from app.tasks.jobs import aggregate_daily_task, reddit_ingest_task
+from app.services.wikidata.refresh import refresh_players_from_wikidata_sync
+from app.services.wikidata.snapshot import default_snapshot_path, snapshot_status
+from app.tasks.jobs import aggregate_daily_task, reddit_ingest_task, refresh_players_from_wikidata
 
 router = APIRouter()
 
@@ -15,6 +18,15 @@ router = APIRouter()
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+def _require_admin(request: Request) -> None:
+    settings = get_settings()
+    if not settings.admin_token:
+        return
+    token = request.headers.get("X-Admin-Token", "")
+    if token != settings.admin_token:
+        raise HTTPException(status_code=401, detail="invalid admin token")
 
 
 @router.get("/players", response_model=list[PlayerOut])
@@ -63,3 +75,22 @@ def trigger_ingest(subreddits: list[str] | None = None, limit_posts: int = 20, l
 def trigger_recompute(day: str = "yesterday"):
     task = aggregate_daily_task.delay(day)
     return {"task_id": task.id}
+
+
+@router.post("/admin/players/refresh-wikidata")
+def refresh_wikidata(request: Request):
+    _require_admin(request)
+    settings = get_settings()
+    if settings.celery_task_always_eager:
+        result = refresh_players_from_wikidata_sync()
+        return {"mode": "sync", **result}
+    task = refresh_players_from_wikidata.delay()
+    return {"mode": "async", "task_id": task.id}
+
+
+@router.get("/admin/players/source-status")
+def wikidata_source_status(request: Request):
+    _require_admin(request)
+    status = snapshot_status()
+    status["snapshot_path"] = str(default_snapshot_path())
+    return status

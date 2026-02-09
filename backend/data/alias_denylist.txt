@@ -1,0 +1,7 @@
+# Alias denylist for Wikidata snapshot generation
+# One entry per line, lowercase or mixed case allowed
+king
+the
+jr
+sr
+mr

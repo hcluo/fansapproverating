@@ -14,6 +14,7 @@ from app.services.matcher import AliasEntry, PlayerMentionMatcher
 from app.services.reddit_client import get_reddit
 from app.services.sentiment import MODEL_NAME, score_text
 from app.services.text import normalize_text
+from app.services.wikidata.refresh import refresh_players_from_wikidata_sync
 
 logger = get_task_logger(__name__)
 
@@ -121,3 +122,9 @@ def aggregate_daily_task(self, day: str = "yesterday"):
     recompute_day(db, target)
     db.close()
     return {"status": "ok", "date": str(target)}
+
+
+@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3})
+def refresh_players_from_wikidata(self):
+    result = refresh_players_from_wikidata_sync()
+    return {"status": "ok", **result}
