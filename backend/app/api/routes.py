@@ -10,7 +10,7 @@ from app.schemas.player import NarrativeOut, PlayerMetricOut, PlayerOut
 from app.services.text import normalize_text
 from app.services.wikidata.refresh import refresh_players_from_wikidata_sync
 from app.services.wikidata.snapshot import default_snapshot_path, snapshot_status
-from app.tasks.jobs import aggregate_daily_task, reddit_ingest_task, refresh_players_from_wikidata
+from app.tasks.jobs import aggregate_daily_task, forum_ingest_task, reddit_ingest_task, refresh_players_from_wikidata
 
 router = APIRouter()
 
@@ -33,7 +33,8 @@ def _require_admin(request: Request) -> None:
 def list_players(query: str | None = None, db: Session = Depends(get_db)):
     stmt = select(Player)
     if query:
-        stmt = stmt.where(Player.normalized_name.contains(normalize_text(query)))
+        norm = normalize_text(query)
+        stmt = stmt.where((Player.normalized_name.contains(norm)) | (Player.team.ilike(f"%{query}%")))
     return db.execute(stmt.order_by(Player.full_name).limit(100)).scalars().all()
 
 
@@ -68,6 +69,12 @@ def narratives(player_id: str, date_value: date = Query(alias="date"), db: Sessi
 @router.post("/admin/ingest/reddit")
 def trigger_ingest(subreddits: list[str] | None = None, limit_posts: int = 20, limit_comments_per_post: int = 100):
     task = reddit_ingest_task.delay(subreddits, limit_posts, limit_comments_per_post)
+    return {"task_id": task.id}
+
+
+@router.post("/admin/ingest/forums")
+def trigger_forum_ingest():
+    task = forum_ingest_task.delay()
     return {"task_id": task.id}
 
 

@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     reddit_user_agent: str = "fansapprove-rating/0.1"
     ingest_subreddits: str = "nba"
 
+    forum_ingest_enabled: bool = True
+    forum_rss_urls: str = "https://bbs.clutchfans.net/forums/houston-rockets-game-action-roster-moves.9/index.rss"
+    forum_rate_limit_seconds: float = 1.0
+    forum_backfill_days: int = 7
+    forum_player_scope: str = "rockets"
+
     celery_task_always_eager: bool = False
     celery_task_eager_propagates: bool = False
 

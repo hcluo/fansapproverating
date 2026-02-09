@@ -15,9 +15,17 @@ async function getMetrics(id) {
   return res.json();
 }
 
+async function getNarrative(id, date) {
+  const res = await fetch(`http://backend:8000/players/${id}/narratives?date=${date}`, { cache: 'no-store' });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export default async function PlayerDetail({ params }) {
   const player = await getPlayer(params.id);
   const metrics = await getMetrics(params.id);
+  const narrativeDate = metrics.length ? metrics[metrics.length - 1].date : new Date().toISOString().slice(0, 10);
+  const narrative = await getNarrative(params.id, narrativeDate);
 
   return (
     <main>
@@ -26,7 +34,21 @@ export default async function PlayerDetail({ params }) {
       <h2>Sentiment Trend</h2>
       <MetricsChart data={metrics} />
       <h3>Top Narratives</h3>
-      <p>Placeholder: narrative summary served via backend endpoint.</p>
+      {narrative ? (
+        <>
+          <p>{narrative.summary}</p>
+          <p>Date: {narrative.date}</p>
+          <ul>
+            {Object.entries(narrative.top_terms_json || {}).map(([term, count]) => (
+              <li key={term}>
+                {term}: {count}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>No narratives available yet.</p>
+      )}
     </main>
   );
 }
